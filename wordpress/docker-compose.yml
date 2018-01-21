@@ -1,7 +1,8 @@
 version: '3'
 services:
   wordpress:
-    build: .
+    # Build from Dockerfile in the ./wordpress folder
+    build: ./wordpress
     ports:
       - "80:80"
       - "443:443"
@@ -13,6 +14,8 @@ services:
       WORDPRESS_DB_HOST: mysql:3306
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
+    env-file:
+      - wordpress.env
     # logging:
     #   driver: "gcplogs"
     restart: always
@@ -23,11 +26,10 @@ services:
        - db_data:/var/lib/mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: somewordpress
       MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: wordpress
+    env-file:
+      - wordpress.env
 
 volumes:
-  db_data:
-  wp_data:
+  db_data: {}
+  wp_data: {}
