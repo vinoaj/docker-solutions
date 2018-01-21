@@ -7,12 +7,6 @@ LABEL maintainer="vinoaj@gmail.com"
 #  -y: automatic "yes" to prompts
 
 # RUN \
-#     apt-get update -y && \
-#     apt-get upgrade -y && \
-#     apt-get install -y stackdriver-agent && \
-#     apt-get clean
-
-# RUN \
 #     curl -sSO https://repo.stackdriver.com/stack-install.sh && \
 #     bash stack-install.sh --write-gcm && \
 #     curl -sSO https://dl.google.com/cloudagents/install-logging-agent.sh && \
@@ -24,8 +18,23 @@ RUN \
     && apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y python-certbot-apache -t stretch-backports \
-    && apt-get install -y cron
+    && apt-get install -y cron \
+        lsb \
+        gnupg2 
     # certbot --apache
+
+# Ensure Google Cloud credentials are in place for Stackdriver
+RUN mkdir -p /etc/google/auth
+COPY credentials.json /etc/google/auth/application_default_credentials.json
+RUN chown root:root /etc/google/auth/application_default_credentials.json \
+    && chmod 0400 /etc/google/auth/application_default_credentials.json
+
+# Install Stackdriver monitoring and logging agents
+RUN \
+    curl -sSO https://dl.google.com/cloudagents/install-monitoring-agent.sh \
+    && bash install-monitoring-agent.sh \
+    && curl -sSO https://dl.google.com/cloudagents/install-logging-agent.sh \
+    && bash install-logging-agent.sh
 
 # RUN \
 #     certbot certonly --webroot \

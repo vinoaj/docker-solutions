@@ -12,9 +12,7 @@ services:
       - wp_data:/var/www/html
     environment:
       WORDPRESS_DB_HOST: mysql:3306
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: wordpress
-    env-file:
+    env_file:
       - wordpress.env
     # logging:
     #   driver: "gcplogs"
@@ -27,7 +25,7 @@ services:
     restart: always
     environment:
       MYSQL_DATABASE: wordpress
-    env-file:
+    env_file:
       - wordpress.env
 
 volumes:
