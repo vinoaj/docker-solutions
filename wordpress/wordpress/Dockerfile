@@ -65,6 +65,12 @@ RUN \
 VOLUME /etc/letsencrypt/
 
 COPY .htaccess /var/www/html/.htaccess
+COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+RUN \
+    replstr='s/$DOMAINREPL/' \
+    && repl="$DOMAIN/" \
+    && expr=$replstr$repl \
+    && sed -i -e $expr /etc/apache2/sites-available/000-default.conf
 
 # Modify Apache rewrite rules to allow /server-status to run interference-free
 # RUN \
