@@ -2,7 +2,10 @@ version: '3'
 services:
   wordpress:
     # Build from Dockerfile in the ./wordpress folder
-    build: ./wordpress
+    build:
+      context: ./wordpress
+      args:
+        DOMAIN: measurementcookbook.com
     ports:
       - "80:80"
       - "443:443"

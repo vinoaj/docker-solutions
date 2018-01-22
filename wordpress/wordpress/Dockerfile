@@ -2,26 +2,22 @@
 FROM wordpress:latest
 LABEL maintainer="vinoaj@gmail.com"
 
+ARG DOMAIN
+# ENV DOMAIN 'xyz.com'
+
 # apt-get switches:
 #  -qq : full quiet mode
 #  -y: automatic "yes" to prompts
-
-# RUN \
-#     curl -sSO https://repo.stackdriver.com/stack-install.sh && \
-#     bash stack-install.sh --write-gcm && \
-#     curl -sSO https://dl.google.com/cloudagents/install-logging-agent.sh && \
-#     bash install-logging-agent.sh
-
 # Install required packages
 RUN \
     echo "deb http://ftp.debian.org/debian stretch-backports main" >> /etc/apt/sources.list \
     && apt-get update -y \
     && apt-get upgrade -y \
-    && apt-get install -y python-certbot-apache -t stretch-backports \
-    && apt-get install -y cron \
+    && apt-get install -y apt-utils \
+        cron \
         lsb \
-        gnupg2 
-    # certbot --apache
+        gnupg2 \
+    && apt-get install -y python-certbot-apache -t stretch-backports 
 
 # Ensure Google Cloud credentials are in place for Stackdriver
 RUN mkdir -p /etc/google/auth
@@ -37,12 +33,6 @@ RUN \
     && bash install-logging-agent.sh
 
 # RUN \
-#     certbot certonly --webroot \
-#     --email vinoaj@vinoaj.com --agree-tos \
-#     -d xyz.com
-#     # -w /var/www/letsencrypt -d xyz.com
-
-# RUN \
 #     certbot certonly \
 #     --agree-tos \
 #     --non-interactive \
@@ -51,7 +41,7 @@ RUN \
 #     --email vinoaj@vinoaj.com \
 #     --webroot \
 #     -w /var/www/html \
-#     -d xyz.com
+#     -d $DOMAIN
 
 # Add cron jobs to auto-renew LetsEncrypt SSL certificates
 RUN \
@@ -73,3 +63,14 @@ RUN \
 
 # Volume for LetsEncrypt
 VOLUME /etc/letsencrypt/
+
+COPY .htaccess /var/www/html/.htaccess
+
+# Modify Apache rewrite rules to allow /server-status to run interference-free
+# RUN \
+#     ls -la /var/www/html \
+#     && sed -i -e \
+#     "/^RewriteCond %{REQUEST_FILENAME} !-d$/RewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_URI} !=/server-status" \
+#     /var/www/html/.htaccess
+
+# CMD sed -i -e 's/^RewriteCond %{REQUEST_FILENAME} !-d$/RewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_URI} !=\/server-status/' /var/www/html/.htaccess
