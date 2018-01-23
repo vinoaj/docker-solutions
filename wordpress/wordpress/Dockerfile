@@ -3,7 +3,6 @@ FROM wordpress:latest
 LABEL maintainer="vinoaj@gmail.com"
 
 ARG DOMAIN
-# ENV DOMAIN 'xyz.com'
 
 # apt-get switches:
 #  -qq : full quiet mode
@@ -14,10 +13,16 @@ RUN \
     && apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y apt-utils \
+    && apt-get install -y \
         cron \
         lsb \
         gnupg2 \
     && apt-get install -y python-certbot-apache -t stretch-backports 
+
+# Clean up: remove all packages from the package cache
+RUN \
+    apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Ensure Google Cloud credentials are in place for Stackdriver
 RUN mkdir -p /etc/google/auth
@@ -32,16 +37,17 @@ RUN \
     && curl -sSO https://dl.google.com/cloudagents/install-logging-agent.sh \
     && bash install-logging-agent.sh
 
-# RUN \
-#     certbot certonly \
-#     --agree-tos \
-#     --non-interactive \
-#     --text \
-#     --rsa-key-size 4096 \
-#     --email vinoaj@vinoaj.com \
-#     --webroot \
-#     -w /var/www/html \
-#     -d $DOMAIN
+# Implement LetsEncrypt SSL certificate using certbot
+RUN \
+    certbot certonly \
+    --agree-tos \
+    --non-interactive \
+    --text \
+    --rsa-key-size 4096 \
+    --email vinoaj@vinoaj.com \
+    --webroot \
+    -w /var/www/html \
+    -d $DOMAIN
 
 # Add cron jobs to auto-renew LetsEncrypt SSL certificates
 RUN \
@@ -56,27 +62,17 @@ RUN \
     touch /var/www/html/robots.txt \
     && echo "User-agent: *\nDisallow:" >> /var/www/html/robots.txt
 
-# Clean up: remove all packages from the package cache
-RUN \
-    apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # Volume for LetsEncrypt
 VOLUME /etc/letsencrypt/
 
+# Manipulating apache2 files
+# - Modify rewrite rules to allow /server-status to run interference-free for Stackdriver
+# - Replace default conf file to do HTTP -> HTTPS redirect
 COPY .htaccess /var/www/html/.htaccess
+# Not proud of this clunky hack, but it works!
 COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
 RUN \
     replstr='s/$DOMAINREPL/' \
     && repl="$DOMAIN/" \
     && expr=$replstr$repl \
     && sed -i -e $expr /etc/apache2/sites-available/000-default.conf
-
-# Modify Apache rewrite rules to allow /server-status to run interference-free
-# RUN \
-#     ls -la /var/www/html \
-#     && sed -i -e \
-#     "/^RewriteCond %{REQUEST_FILENAME} !-d$/RewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_URI} !=/server-status" \
-#     /var/www/html/.htaccess
-
-# CMD sed -i -e 's/^RewriteCond %{REQUEST_FILENAME} !-d$/RewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_URI} !=\/server-status/' /var/www/html/.htaccess
